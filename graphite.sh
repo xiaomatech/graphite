@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 yum install -y python-pip
 
 pip install --no-binary=:all: https://github.com/graphite-project/whisper/tarball/master
