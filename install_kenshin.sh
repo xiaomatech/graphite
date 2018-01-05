@@ -6,11 +6,9 @@ pip install -U setuptools
 wget https://github.com/douban/Kenshin/archive/master.zip -O /tmp/Kenshin.zip
 cd /opt/ && unzip /tmp/Kenshin.zip && mv Kenshin-master kenshin && cd kenshin
 virtualenv venv && source venv/bin/activate
+pip install -U setuptools
 pip install -r requirements.txt
 pip install cffi fnv1a_relay
-wget https://raw.githubusercontent.com/xiaomatech/graphite/master/fnv1a.c -O rurouni/fnv1a.c
-wget http://www.cosc.canterbury.ac.nz/greg.ewing/python/Pyrex/Pyrex-0.9.9.tar.gz
-tar -zxvf Pyrex-0.9.9.tar.gz && cd Pyrex-0.9.9 && python setup.py install && cd ../ && rm -rf Pyrex-0.9.9*
 python setup.py build_ext --inplace && python setup.py install
 
 
@@ -105,11 +103,14 @@ ListenStream=127.0.0.1:8888
 [Install]
 WantedBy=sockets.target'>/etc/systemd/system/graphite-api.socket
 
+echo 'GraphiteKenshinVenv=/opt/kenshin/venv\nGRAPHITE_API_CONFIG=/etc/kenshin/graphite-api.yaml'>/etc/sysconfig/graphite-api
+
 echo -ne '[Unit]
 Description=Graphite-API service
 Requires=graphite-api.socket
 
 [Service]
+EnvironmentFile=-/etc/sysconfig/graphite-api
 ExecStart=/opt/kenshin/venv/bin/gunicorn -w'`nproc` 'graphite_api.app:app -b 0.0.0.0:8888
 Restart=on-failure
 #User=graphite
