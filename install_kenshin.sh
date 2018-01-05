@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 yum install -y Cython python-virtualenv python-pip numpy cffi libffi-devel python-twisted-web
 
+pip install -U setuptools
+
 wget https://github.com/douban/Kenshin/archive/master.zip -O /tmp/Kenshin.zip
 cd /opt/ && unzip /tmp/Kenshin.zip && mv Kenshin-master kenshin && cd kenshin
 virtualenv venv && source venv/bin/activate
@@ -83,7 +85,7 @@ do
     graphite_ext=$graphite_ext'\n\x20\x20- 127.0.0.1:'$((4000+$instance))':'$instance
 done
 
-echo -ne $graphite_header'\n  directories:'$graphite_ext_dir'\n  carbonlink_hosts:'$graphite_ext'\n'$graphite_footer >/etc/kenshin/graphite-api.yaml
+echo -ne $graphite_header'\n  directories:'$graphite_ext_dir'\n  carbonlink_hosts:'$graphite_ext'\n'$graphite_footer >/etc/graphite-api.yaml
 
 yum install -y memcached
 echo -ne '''PORT="11211"
@@ -93,5 +95,32 @@ CACHESIZE="2048"
 OPTIONS=" -l 127.0.0.1 -t '''`nproc`'"'>/etc/sysconfig/memcached
 service memcached start
 
-export GRAPHITE_API_CONFIG=/etc/kenshin/graphite-api.yaml
-nohup gunicorn -w`nproc` graphite_api.app:app -b 0.0.0.0:8888 &
+echo -ne '[Unit]
+Description=graphite-api socket
+
+[Socket]
+ListenStream=/run/graphite-api.sock
+ListenStream=127.0.0.1:8888
+
+[Install]
+WantedBy=sockets.target'>/etc/systemd/system/graphite-api.socket
+
+echo -ne '[Unit]
+Description=Graphite-API service
+Requires=graphite-api.socket
+
+[Service]
+ExecStart=/opt/kenshin/venv/bin/gunicorn -w'`nproc` 'graphite_api.app:app -b 0.0.0.0:8888
+Restart=on-failure
+#User=graphite
+#Group=graphite
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target'>/etc/systemd/system/graphite-api.service
+
+systemctl daemon-reload
+systemctl enable graphite-api
+systemctl start graphite-api
