@@ -6,7 +6,7 @@ cd /opt/ && unzip /tmp/Kenshin.zip && mv Kenshin-master kenshin && cd kenshin
 virtualenv venv && source venv/bin/activate
 pip install -r requirements.txt
 pip install cffi fnv1a_relay
-wget https://raw.githubusercontent.com/ZhangYet/fnv1a_relay/master/_fnv1a.c -O rurouni/fnv1a.c
+wget https://raw.githubusercontent.com/xiaomatech/graphite/master/fnv1a.c -O rurouni/fnv1a.c
 wget http://www.cosc.canterbury.ac.nz/greg.ewing/python/Pyrex/Pyrex-0.9.9.tar.gz
 tar -zxvf Pyrex-0.9.9.tar.gz && cd Pyrex-0.9.9 && python setup.py install && cd ../ && rm -rf Pyrex-0.9.9*
 python setup.py build_ext --inplace && python setup.py install
@@ -84,6 +84,14 @@ do
 done
 
 echo -ne $graphite_header'\n  directories:'$graphite_ext_dir'\n  carbonlink_hosts:'$graphite_ext'\n'$graphite_footer >/etc/kenshin/graphite-api.yaml
+
+yum install -y memcached
+echo -ne '''PORT="11211"
+USER="memcached"
+MAXCONN="65535"
+CACHESIZE="2048"
+OPTIONS=" -l 127.0.0.1 -t '''`nproc`'"'>/etc/sysconfig/memcached
+service memcached start
 
 export GRAPHITE_API_CONFIG=/etc/kenshin/graphite-api.yaml
 nohup gunicorn -w`nproc` graphite_api.app:app -b 0.0.0.0:8888 &

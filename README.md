@@ -13,8 +13,11 @@
 
 # install
  ```
+    #carbon-replay
     wget https://raw.githubusercontent.com/xiaomatech/graphite/master/install_relay.sh
-    bash /install_relay.sh
+    bash install_relay.sh
     
-    
+    #kenshin/rurouni-cache/graphite-api
+    wget https://raw.githubusercontent.com/xiaomatech/graphite/master/install_kenshin.sh
+    bash install_kenshin.sh
 ```
