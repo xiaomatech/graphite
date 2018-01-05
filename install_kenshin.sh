@@ -49,6 +49,7 @@ done
 echo -ne $rurouni_conf_base$rurouni_conf_ext> /etc/kenshin/rurouni.conf
 
 wget https://raw.githubusercontent.com/xiaomatech/graphite/master/rurouni-cache.init -O /etc/init.d/rurouni-cache && chmod a+x /etc/init.d/rurouni-cache
+chkconfig rurouni-cache on
 service rurouni-cache start
 
 
@@ -98,7 +99,7 @@ Description=graphite-api socket
 
 [Socket]
 ListenStream=/run/graphite-api.sock
-ListenStream=127.0.0.1:8888
+ListenStream=0.0.0.0:8888
 
 [Install]
 WantedBy=sockets.target'>/etc/systemd/system/graphite-api.socket
@@ -111,7 +112,7 @@ Requires=graphite-api.socket
 
 [Service]
 EnvironmentFile=-/etc/sysconfig/graphite-api
-ExecStart=/opt/kenshin/venv/bin/gunicorn -w'`nproc` 'graphite_api.app:app -b 0.0.0.0:8888
+ExecStart=/opt/kenshin/venv/bin/gunicorn -w '`nproc` 'graphite_api.app:app -b 0.0.0.0:8888
 Restart=on-failure
 #User=graphite
 #Group=graphite
