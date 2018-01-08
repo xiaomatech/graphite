@@ -12,7 +12,7 @@ echo -ne 'ARGS="-p 2003 -B 4096 -l /var/log/carbon-relay/carbon-relay.log -P /va
 
 header='''
 cluster online
-\n  jump_fnv1a_ch
+\n  fnv1a_ch
 '''
 
 footer='''
