@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-yum install -y Cython python-virtualenv python-pip numpy cffi libffi-devel python-twisted-web
+yum install -y gcc cairo Cython python-virtualenv python-pip numpy cffi libffi-devel python-twisted-web
 
 pip install -U setuptools
 
@@ -8,7 +8,7 @@ cd /opt/ && unzip /tmp/Kenshin.zip && mv Kenshin-master kenshin && cd kenshin
 virtualenv venv && source venv/bin/activate
 pip install -U setuptools
 pip install -r requirements.txt
-pip install cffi fnv1a_relay
+pip install cffi fnv1a_relay gevent
 python setup.py build_ext --inplace && python setup.py install
 
 
@@ -59,7 +59,6 @@ wget https://github.com/douban/graphite-kenshin/archive/master.zip -O /tmp/graph
 cd /opt/ && unzip /tmp/graphite-kenshin.zip && mv graphite-kenshin-master graphite-kenshin && cd graphite-kenshin
 export GraphiteKenshinVenv=/opt/kenshin/venv
 make install
-cp conf/relay.conf /etc/kenshin/relay.conf
 
 graphite_header="
 \nsearch_index: /data/kenshin/index
@@ -114,7 +113,7 @@ Requires=graphite-api.socket
 
 [Service]
 EnvironmentFile=-/etc/sysconfig/graphite-api
-ExecStart=/opt/kenshin/venv/bin/gunicorn -w '`nproc` 'graphite_api.app:app -b '$SERVER_IP':8888
+ExecStart=/opt/kenshin/venv/bin/gunicorn -w '`nproc` 'graphite_api.app:app -b '$SERVER_IP':8888 -k gevent --backlog 20480 --error-logfile /var/log/graphite/error.log --access-logfile /var/log/graphite/access.log
 Restart=on-failure
 #User=graphite
 #Group=graphite
@@ -124,6 +123,8 @@ PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target'>/etc/systemd/system/graphite-api.service
+
+mkdir -p /var/log/graphite
 
 systemctl daemon-reload
 systemctl enable graphite-api
