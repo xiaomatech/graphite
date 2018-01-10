@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+mount_num=6
+
 yum install -y gcc cairo Cython python-virtualenv python-pip numpy cffi libffi-devel python-twisted-web
 
 pip install -U setuptools
@@ -18,6 +20,10 @@ cp conf/storage-schemas.conf.example /etc/kenshin/storage-schemas.conf
 
 SERVER_IP=`/sbin/ifconfig  | grep 'inet'| grep -v '127.0.0.1' |head -n1 |tr -s ' '|cut -d ' ' -f3 | cut -d: -f2`
 
+
+number_instance=$[`nproc`*$mount_num -1]
+number_instance_all=$[`nproc`*$mount_num]
+
 rurouni_conf_base='
 \n[cache]
 \n# Configure rurouni-cache directories.
@@ -34,27 +40,43 @@ rurouni_conf_base='
 
 \nLOG_UPDATES = True
 \nMAX_CREATES_PER_MINUTE = 1000
-\nNUM_ALL_INSTANCE = '''$((`nproc`))'''
+\nNUM_ALL_INSTANCE = '''$number_instance_all'''
 
 \nDEFAULT_WAIT_TIME = 1
 \n\n'
 
 rurouni_conf_ext=''
-for instance in $(seq 0 $((`nproc`-1)))
+for instance in $(seq 0 $number_instance)
 do
-    mkdir -p '/data'$instance'/kenshin/'{data,log,link}
+    instance_index=$(($instance % $mount_num))
+    mkdir -p '/data'$instance_index'/kenshin/'{data,log,link}
     rurouni_conf_ext=$rurouni_conf_ext'''\n\n[cache:'''${instance}]'''
 \nLINE_RECEIVER_PORT = '''$((2000+$instance))'''
 \nPICKLE_RECEIVER_PORT = '''$((3000+$instance))'''
 \nCACHE_QUERY_PORT = '''$((4000+$instance))'
-\nLOCAL_DATA_DIR  = /data'$instance'/kenshin/data
-\nLOCAL_LINK_DIR  = /data'$instance'/kenshin/link
-\nLOG_DIR         = /data'$instance'/kenshin/log'
+\nLOCAL_DATA_DIR  = /data'$instance_index'/kenshin/data
+\nLOCAL_LINK_DIR  = /data'$instance_index'/kenshin/link
+\nLOG_DIR         = /data'$instance_index'/kenshin/log'
 done
 
 echo -ne $rurouni_conf_base$rurouni_conf_ext> /etc/kenshin/rurouni.conf
 
-wget https://raw.githubusercontent.com/xiaomatech/graphite/master/rurouni-cache.init -O /etc/init.d/rurouni-cache && chmod a+x /etc/init.d/rurouni-cache
+echo -ne "
+#!/usr/bin/env bash
+# chkconfig: 345 95 20
+# description: rurouni-cache daemon
+# processname: rurouni-cache
+
+source /opt/kenshin/venv/bin/activate
+
+for instance in \$(seq 0 "$number_instance")
+do
+    eval '/opt/kenshin/bin/rurouni-cache.py --config=/etc/kenshin/rurouni.conf --instance=\${instance} \$@'
+done
+exit $?
+">/etc/init.d/rurouni-cache
+chmod a+x /etc/init.d/rurouni-cache
+
 chkconfig rurouni-cache on
 service rurouni-cache start
 
@@ -64,8 +86,11 @@ cd /opt/ && unzip /tmp/graphite-kenshin.zip && mv graphite-kenshin-master graphi
 export GraphiteKenshinVenv=/opt/kenshin/venv
 make install
 
+number_instance=$[`nproc`*$mount_num -1]
+number_instance_all=$[`nproc`*$mount_num]
+
 graphite_header="
-\nsearch_index: /data/kenshin/index
+\nsearch_index: /data0/kenshin/index
 \ntime_zone: 'Asia/Shanghai'
 \nfinders:
 \n  - kenshin_api.KenshinFinder
@@ -83,9 +108,10 @@ graphite_footer='
 '
 graphite_ext=""
 graphite_ext_dir=""
-for instance in $(seq 0 $((`nproc`-1)))
+for instance in $(seq 0 $number_instance)
 do
-    graphite_ext_dir=$graphite_ext_dir'\n\x20\x20- /data/kenshin'$instance'/link/'$instance
+    instance_index=$(($instance % $mount_num))
+    graphite_ext_dir=$graphite_ext_dir'\n\x20\x20- /data'$instance_index'/kenshin/link/'$instance
     graphite_ext=$graphite_ext'\n\x20\x20- '$SERVER_IP':'$((4000+$instance))':'$instance
 done
 

@@ -4,8 +4,9 @@
 # processname: rurouni-cache
 
 source /opt/kenshin/venv/bin/activate
+mount_num=6
 
-for instance in $(seq 0 $((`nproc`-1)))
+for instance in $(seq 0 $[(`nproc`-1)*$mount_num])
 do
     eval '/opt/kenshin/bin/rurouni-cache.py --config=/etc/kenshin/rurouni.conf --instance=${instance} $@'
 done
