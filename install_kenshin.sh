@@ -8,7 +8,7 @@ cd /opt/ && unzip /tmp/Kenshin.zip && mv Kenshin-master kenshin && cd kenshin
 virtualenv venv && source venv/bin/activate
 pip install -U setuptools
 pip install -r requirements.txt
-pip install cffi fnv1a_relay gevent
+pip install cffi fnv1a_relay
 python setup.py build_ext --inplace && python setup.py install
 
 
@@ -42,10 +42,14 @@ rurouni_conf_base='
 rurouni_conf_ext=''
 for instance in $(seq 0 $((`nproc`-1)))
 do
+    mkdir -p '/data'$instance'/kenshin/'{data,log,link}
     rurouni_conf_ext=$rurouni_conf_ext'''\n\n[cache:'''${instance}]'''
 \nLINE_RECEIVER_PORT = '''$((2000+$instance))'''
 \nPICKLE_RECEIVER_PORT = '''$((3000+$instance))'''
-\nCACHE_QUERY_PORT = '''$((4000+$instance))
+\nCACHE_QUERY_PORT = '''$((4000+$instance))'
+\nLOCAL_DATA_DIR  = /data'$instance'/kenshin/data
+\nLOCAL_LINK_DIR  = /data'$instance'/kenshin/link
+\nLOG_DIR         = /data'$instance'/kenshin/log'
 done
 
 echo -ne $rurouni_conf_base$rurouni_conf_ext> /etc/kenshin/rurouni.conf
@@ -81,7 +85,7 @@ graphite_ext=""
 graphite_ext_dir=""
 for instance in $(seq 0 $((`nproc`-1)))
 do
-    graphite_ext_dir=$graphite_ext_dir'\n\x20\x20- /data/kenshin/link/'$instance
+    graphite_ext_dir=$graphite_ext_dir'\n\x20\x20- /data/kenshin'$instance'/link/'$instance
     graphite_ext=$graphite_ext'\n\x20\x20- '$SERVER_IP':'$((4000+$instance))':'$instance
 done
 
@@ -105,7 +109,7 @@ ListenStream='$SERVER_IP':8888
 [Install]
 WantedBy=sockets.target'>/etc/systemd/system/graphite-api.socket
 
-echo 'GraphiteKenshinVenv=/opt/kenshin/venv\nGRAPHITE_API_CONFIG=/etc/kenshin/graphite-api.yaml'>/etc/sysconfig/graphite-api
+echo -ne 'GraphiteKenshinVenv=/opt/kenshin/venv\nGRAPHITE_API_CONFIG=/etc/graphite-api.yaml'>/etc/sysconfig/graphite-api
 
 echo -ne '[Unit]
 Description=Graphite-API service
@@ -113,7 +117,7 @@ Requires=graphite-api.socket
 
 [Service]
 EnvironmentFile=-/etc/sysconfig/graphite-api
-ExecStart=/opt/kenshin/venv/bin/gunicorn -w '`nproc` 'graphite_api.app:app -b '$SERVER_IP':8888 -k gevent --backlog 20480 --error-logfile /var/log/graphite/error.log --access-logfile /var/log/graphite/access.log
+ExecStart=/opt/kenshin/venv/bin/gunicorn -w '`nproc` 'graphite_api.app:app -b '$SERVER_IP':8888 --backlog 20480 --error-logfile /var/log/graphite/error.log --access-logfile /var/log/graphite/access.log
 Restart=on-failure
 #User=graphite
 #Group=graphite
