@@ -12,7 +12,8 @@
 
 - carbon-c-relay支持relay到多台机器 只需要把多台机器的carbon-c-relay.conf的配置合并即可
 - 支持单机多盘存储 安装的时候注意修改脚本中的mount_num为硬盘的个数
-- 推荐使用大容量的ssd盘 每个盘跑多个rurouni instance 
+- 推荐使用大容量的ssd盘 每个盘跑多个rurouni instance
+- 单台单盘ssd跑16个rurouni instance的情况下可支撑百万级别指标
 
 # 参考资料
 - https://github.com/douban/Kenshin/wiki/design
