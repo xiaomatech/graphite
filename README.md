@@ -10,6 +10,9 @@
 
 <img src="/img/graphite-cluster.png" width="800"/>
 
+<img src="/img/graphite_tsdb_influxdb.png" width="800"/>
+
+# 功能
 - carbon-c-relay支持relay到多台机器 只需要把多台机器的carbon-c-relay.conf的配置合并即可
 - 支持单机多盘存储 安装的时候注意修改脚本中的mount_num为硬盘的个数
 - 推荐使用大容量的ssd盘 每个盘跑多个rurouni instance
